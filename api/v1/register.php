@@ -8,11 +8,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($input['username'], $input['
     jsonResponse(['error' => 'Invalid request'], 400);
 }
 
-$username = $input['username'];
-$password = password_hash($input['password'], PASSWORD_BCRYPT);
+// Sanitize inputs
+$username = sanitizeInput($input['username']);
+$password = sanitizeInput($input['password']);
 
+// Validate inputs
+if (!validateUsername($username)) {
+    jsonResponse(['error' => 'Username must be alphanumeric and 3-20 characters long'], 400);
+}
+
+if (!validatePassword($password)) {
+    jsonResponse(['error' => 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number'], 400);
+}
+
+// Hash the password
+$passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
+// Insert into the database
 $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-if ($stmt->execute([$username, $password])) {
+if ($stmt->execute([$username, $passwordHash])) {
     jsonResponse(['message' => 'User registered successfully'], 201);
 } else {
     jsonResponse(['error' => 'Registration failed'], 500);

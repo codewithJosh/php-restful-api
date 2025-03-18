@@ -8,9 +8,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($input['username'], $input['
     jsonResponse(['error' => 'Invalid request'], 400);
 }
 
-$username = $input['username'];
-$password = $input['password'];
+// Sanitize inputs
+$username = sanitizeInput($input['username']);
+$password = sanitizeInput($input['password']);
 
+// Validate inputs
+if (!validateUsername($username)) {
+    jsonResponse(['error' => 'Invalid username'], 400);
+}
+
+if (empty($password)) {
+    jsonResponse(['error' => 'Password is required'], 400);
+}
+
+// Fetch user from the database
 $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
 $stmt->execute([$username]);
 $user = $stmt->fetch();

@@ -4,6 +4,9 @@ require_once '../../includes/functions.php';
 $headers = getallheaders();
 $token = $headers['Authorization'] ?? '';
 
+// Sanitize the token
+$token = sanitizeInput($token);
+
 if (empty($token)) {
     jsonResponse(['error' => 'Unauthorized'], 401);
 }
