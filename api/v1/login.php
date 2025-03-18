@@ -2,34 +2,46 @@
 require_once '../../includes/db.php';
 require_once '../../includes/functions.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
+try {
+    $input = json_decode(file_get_contents('php://input'), true);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($input['username'], $input['password'])) {
-    jsonResponse(['error' => 'Invalid request'], 400);
-}
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($input['username'], $input['password'])) {
+        handleError('Invalid request', 400);
+    }
 
-// Sanitize inputs
-$username = sanitizeInput($input['username']);
-$password = sanitizeInput($input['password']);
+    // Sanitize inputs
+    $username = sanitizeInput($input['username']);
+    $password = sanitizeInput($input['password']);
 
-// Validate inputs
-if (!validateUsername($username)) {
-    jsonResponse(['error' => 'Invalid username'], 400);
-}
+    // Validate inputs
+    if (!validateUsername($username)) {
+        handleError('Invalid username', 400);
+    }
 
-if (empty($password)) {
-    jsonResponse(['error' => 'Password is required'], 400);
-}
+    if (empty($password)) {
+        handleError('Password is required', 400);
+    }
 
-// Fetch user from the database
-$stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-$stmt->execute([$username]);
-$user = $stmt->fetch();
+    // Fetch user from the database
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    if (!$stmt->execute([$username])) {
+        handleError('Database error', 500);
+    }
 
-if ($user && password_verify($password, $user['password'])) {
+    $user = $stmt->fetch();
+    if (!$user || !password_verify($password, $user['password'])) {
+        handleError('Invalid credentials', 401);
+    }
+
+    // Generate a token
     $token = generateToken();
-    // In a real application, you would store this token in the database
+    if (!$token) {
+        handleError('Failed to generate token', 500);
+    }
+
     jsonResponse(['token' => $token]);
-} else {
-    jsonResponse(['error' => 'Invalid credentials'], 401);
+} catch (PDOException $e) {
+    handleError('Database error: ' . $e->getMessage(), 500);
+} catch (Exception $e) {
+    handleError('An unexpected error occurred', 500);
 }

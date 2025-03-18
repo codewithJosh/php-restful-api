@@ -27,3 +27,22 @@ function validateUsername($username) {
 function validatePassword($password) {
     return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password);
 }
+
+// Handle errors and return a JSON response
+function handleError($message, $statusCode = 500) {
+    error_log("Error: $message"); // Log the error to the server's error log
+    jsonResponse(['error' => $message], $statusCode);
+}
+
+// Handle exceptions and return a JSON response
+function handleException($exception) {
+    error_log("Exception: " . $exception->getMessage()); // Log the exception
+    jsonResponse(['error' => 'An unexpected error occurred'], 500);
+}
+
+// Set up global error and exception handlers
+set_error_handler(function ($severity, $message, $file, $line) {
+    handleError("$message in $file on line $line");
+});
+
+set_exception_handler('handleException');
